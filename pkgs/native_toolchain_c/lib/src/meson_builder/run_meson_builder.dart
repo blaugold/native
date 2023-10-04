@@ -37,7 +37,7 @@ import '../utils/run_process.dart';
 // TODO: Find ccache and wrap compilers with it
 
 class RunMesonBuilder {
-  static final supportedMesonVersionRange = VersionConstraint.parse('^1.0.0');
+  static final _supportedMesonVersionRange = VersionConstraint.parse('^1.0.0');
 
   final BuildConfig buildConfig;
   final Logger? logger;
@@ -86,10 +86,10 @@ class RunMesonBuilder {
 
     // TODO: Remove ignore once bug in Dart is fixed.
     // ignore: unnecessary_non_null_assertion
-    if (!supportedMesonVersionRange.allows(mesonInstance!.version!)) {
+    if (!_supportedMesonVersionRange.allows(mesonInstance!.version!)) {
       final errorMessage =
           'Meson version ${mesonInstance.version} is in the range of supported '
-          'versions ($supportedMesonVersionRange).';
+          'versions ($_supportedMesonVersionRange).';
       logger?.severe(errorMessage);
       throw ToolError(errorMessage);
     }
