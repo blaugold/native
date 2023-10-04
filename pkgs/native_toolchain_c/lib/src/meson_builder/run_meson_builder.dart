@@ -95,6 +95,8 @@ class RunMesonBuilder {
     }
 
     final compilerEnvironment = await _compilerEnvironment(compiler);
+    final pathEnvVar = (compilerEnvironment ?? Platform.environment)['PATH']!;
+
     final crossFile = await _generateCrossFile(
       compiler: compiler,
       linker: linker,
@@ -131,8 +133,8 @@ class RunMesonBuilder {
         mesonTarget,
       ],
       environment: {
-        'PATH': '${ninjaInstance.uri.toFilePath()}:'
-            '${Platform.environment['PATH']!}',
+        ...?compilerEnvironment,
+        'PATH': '${ninjaInstance.uri.toFilePath()}:$pathEnvVar',
       },
       throwOnUnexpectedExitCode: true,
       workingDirectory: projectDir,
