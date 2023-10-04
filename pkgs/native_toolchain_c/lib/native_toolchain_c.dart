@@ -5,4 +5,5 @@
 /// A library to invoke the native C compiler installed on the host machine.
 library;
 
-export 'src/cbuilder/cbuilder.dart';
+export 'src/cbuilder/cbuilder.dart' show Builder, CBuilder, Language;
+export 'src/meson_builder/meson_builder.dart' show MesonBuilder;
