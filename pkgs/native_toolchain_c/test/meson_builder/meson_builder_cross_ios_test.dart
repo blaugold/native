@@ -16,7 +16,7 @@ import 'package:native_toolchain_c/src/utils/run_process.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
-import 'meson_builder_cross_android_test.dart';
+import 'helpers.dart';
 
 void main() {
   if (!Platform.isMacOS) {
@@ -46,20 +46,13 @@ void main() {
 
         final libName = target.os.libraryFileName(name, linkMode);
 
-        final suffix = testSuffix([
-          linkMode,
-          targetIOSSdk,
-          target,
-        ]);
+        final suffix = testSuffix([linkMode, target, targetIOSSdk]);
 
-        test('MesonBuilder library$suffix',
-            // TODO: Test all link modes once implemented.
-            skip: linkMode != LinkMode.dynamic, () async {
+        test('MesonBuilder library$suffix', () async {
           final tempUri = await tempDirForTest();
-          final mesonAddLibDirUri = fixturesDirUri.resolve('meson_add_lib/');
           final buildConfig = BuildConfig(
             outDir: tempUri,
-            packageRoot: mesonAddLibDirUri,
+            packageRoot: mesonAddLibProjectUri,
             targetArchitecture: target.architecture,
             targetOs: target.os,
             buildMode: BuildMode.release,
@@ -81,8 +74,7 @@ void main() {
             logger: logger,
           );
 
-          final libUri =
-              (buildOutput.assets.first.path as AssetAbsolutePath).uri;
+          final libUri = tempUri.resolve(libName);
           final objdumpResult = await runProcess(
             executable: Uri.file('objdump'),
             arguments: ['-t', libUri.path],

@@ -1,13 +1,11 @@
 import 'dart:ffi';
-import 'dart:io';
 
 import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
-
-final fixturesDirUri = Directory('test/meson_builder/fixtures').absolute.uri;
+import 'helpers.dart';
 
 void main() {
   for (final dryRun in [true, false]) {
@@ -20,18 +18,17 @@ void main() {
       test('MesonBuilder library$suffix', () async {
         const name = 'add';
         final tempDir = await tempDirForTest();
-        final mesonAddLibDirUri = fixturesDirUri.resolve('meson_add_lib/');
 
         final buildConfig = dryRun
             ? BuildConfig.dryRun(
                 outDir: tempDir,
-                packageRoot: mesonAddLibDirUri,
+                packageRoot: mesonAddLibProjectUri,
                 targetOs: OS.current,
                 linkModePreference: LinkModePreference.dynamic,
               )
             : BuildConfig(
                 outDir: tempDir,
-                packageRoot: mesonAddLibDirUri,
+                packageRoot: mesonAddLibProjectUri,
                 targetOs: OS.current,
                 linkModePreference: LinkModePreference.dynamic,
                 buildMode: buildMode,

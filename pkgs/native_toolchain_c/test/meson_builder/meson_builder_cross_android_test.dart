@@ -10,6 +10,7 @@ import 'package:native_toolchain_c/src/utils/run_process.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
+import 'helpers.dart';
 
 void main() {
   const targets = [
@@ -41,7 +42,8 @@ void main() {
 
   for (final linkMode in LinkMode.values) {
     for (final target in targets) {
-      test('MesonBuilder $linkMode library $target', () async {
+      final suffix = testSuffix([linkMode, target]);
+      test('MesonBuilder library$suffix', () async {
         final tempUri = await tempDirForTest();
         final libUri = await buildLib(
           tempUri,
@@ -101,8 +103,6 @@ void main() {
   });
 }
 
-final fixturesDirUri = Directory('test/meson_builder/fixtures').absolute.uri;
-
 Future<Uri> buildLib(
   Uri tempUri,
   Target target,
@@ -110,11 +110,10 @@ Future<Uri> buildLib(
   LinkMode linkMode,
 ) async {
   const name = 'add';
-  final mesonAddLibDirUri = fixturesDirUri.resolve('meson_add_lib/');
 
   final buildConfig = BuildConfig(
     outDir: tempUri,
-    packageRoot: mesonAddLibDirUri,
+    packageRoot: mesonAddLibProjectUri,
     targetArchitecture: target.architecture,
     targetOs: target.os,
     targetAndroidNdkApi: androidNdkApi,
@@ -136,5 +135,5 @@ Future<Uri> buildLib(
     logger: logger,
   );
 
-  return (buildOutput.assets.first.path as AssetAbsolutePath).uri;
+  return tempUri.resolve(target.os.libraryFileName(name, linkMode));
 }
