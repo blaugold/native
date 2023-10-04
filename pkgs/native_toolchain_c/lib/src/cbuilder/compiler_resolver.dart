@@ -104,12 +104,78 @@ class CompilerResolver {
     return null;
   }
 
-  Future<ToolInstance?> _tryLoadToolFromNativeToolchain(Tool tool) async {
-    final resolved = (await tool.defaultResolver!.resolve(logger: logger))
-        .where((i) => i.tool == tool)
-        .toList()
-      ..sort();
-    return resolved.isEmpty ? null : resolved.first;
+  Future<ToolInstance> resolveLinker() async {
+    // First, check if the launcher provided a direct path to the linker.
+    var result = await _tryLoadLinkerFromConfig(
+      CCompilerConfig.ldConfigKeyFull,
+      (buildConfig) => buildConfig.cCompiler.ld,
+    );
+
+    // Then, try to detect on the host machine.
+    final tool = _selectLinker();
+    if (tool != null) {
+      result ??= await _tryLoadToolFromNativeToolchain(tool);
+    }
+
+    if (result != null) {
+      return result;
+    }
+
+    final targetOs = buildConfig.targetOs;
+    final targetArchitecture = buildConfig.targetArchitecture;
+    final errorMessage = "No tools configured on host '$host' with target "
+        "'${targetOs}_$targetArchitecture'.";
+    logger?.severe(errorMessage);
+    throw ToolError(errorMessage);
+  }
+
+  /// Select the right linker for cross compiling to the specified target.
+  Tool? _selectLinker() {
+    final targetOs = buildConfig.targetOs;
+    final targetArch = buildConfig.targetArchitecture;
+
+    // TODO(dacoharkes): Support falling back on other tools.
+    if (targetArch == host.architecture &&
+        targetOs == host.os &&
+        host.os == OS.linux) return lld;
+    if (targetOs == OS.macOS || targetOs == OS.iOS) return appleLd;
+    if (targetOs == OS.android) return androidNdkLld;
+    if (host.os == OS.linux) {
+      switch (targetArch) {
+        case Architecture.arm:
+          return armLinuxGnueabihfLd;
+        case Architecture.arm64:
+          return aarch64LinuxGnuLd;
+        case Architecture.ia32:
+          return i686LinuxGnuLd;
+      }
+    }
+
+    if (host.os == OS.windows) {
+      switch (targetArch) {
+        case Architecture.ia32:
+          return linkIA32;
+        case Architecture.x64:
+          return link;
+      }
+    }
+
+    return null;
+  }
+
+  Future<ToolInstance?> _tryLoadLinkerFromConfig(
+      String configKey, Uri? Function(BuildConfig) getter) async {
+    final configLdUri = getter(buildConfig);
+    if (configLdUri != null) {
+      assert(await File.fromUri(configLdUri).exists());
+      logger?.finer('Using linker ${configLdUri.toFilePath()} '
+          'from config[${CCompilerConfig.ldConfigKeyFull}].');
+      return (await LinkerRecognizer(configLdUri).resolve(logger: logger))
+          .first;
+    }
+    logger
+        ?.finer('No linker set in config[${CCompilerConfig.ldConfigKeyFull}].');
+    return null;
   }
 
   Future<ToolInstance> resolveArchiver() async {
@@ -185,6 +251,68 @@ class CompilerResolver {
     logger?.finer(
         'No archiver set in config[${CCompilerConfig.arConfigKeyFull}].');
     return null;
+  }
+
+  Future<ToolInstance?> resolveStrip() async {
+    // TODO: Handle resolving when launcher provides tools
+    // Should launcher provide strip?
+    // We could probably find the right strip tool relative to the compiler.
+    ToolInstance? result;
+
+    // Then, try to detect on the host machine.
+    final tool = _selectStrip();
+    if (tool != null) {
+      result ??= await _tryLoadToolFromNativeToolchain(tool);
+    }
+
+    if (result != null) {
+      return result;
+    }
+
+    if (buildConfig.targetOs != OS.windows) {
+      final targetOs = buildConfig.targetOs;
+      final targetArchitecture = buildConfig.targetArchitecture;
+      final errorMessage = "No tools configured on host '$host' with target "
+          "'${targetOs}_$targetArchitecture'.";
+      logger?.severe(errorMessage);
+      throw ToolError(errorMessage);
+    }
+
+    return null;
+  }
+
+  /// Select the right object stripping tool for cross compiling to the
+  /// specified target.
+  Tool? _selectStrip() {
+    final targetOs = buildConfig.targetOs;
+    final targetArch = buildConfig.targetArchitecture;
+
+    // TODO(dacoharkes): Support falling back on other tools.
+    if (targetArch == host.architecture &&
+        targetOs == host.os &&
+        host.os == OS.linux) return llvmStrip;
+    if (targetOs == OS.macOS || targetOs == OS.iOS) return appleStrip;
+    if (targetOs == OS.android) return androidNdkStrip;
+    if (host.os == OS.linux) {
+      switch (targetArch) {
+        case Architecture.arm:
+          return armLinuxGnueabihfStrip;
+        case Architecture.arm64:
+          return aarch64LinuxGnuStrip;
+        case Architecture.ia32:
+          return i686LinuxGnuStrip;
+      }
+    }
+
+    return null;
+  }
+
+  Future<ToolInstance?> _tryLoadToolFromNativeToolchain(Tool tool) async {
+    final resolved = (await tool.defaultResolver!.resolve(logger: logger))
+        .where((i) => i.tool == tool)
+        .toList()
+      ..sort();
+    return resolved.isEmpty ? null : resolved.first;
   }
 
   Future<Uri?> toolchainEnvironmentScript(ToolInstance compiler) async {

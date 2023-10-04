@@ -53,3 +53,19 @@ final Tool lld = Tool(
     ]),
   ),
 );
+
+/// The LLVM object stripping tool.
+///
+/// https://llvm.org/docs/CommandGuide/llvm-strip.html
+final Tool llvmStrip = Tool(
+  name: 'LLVM object stripping tool',
+  defaultResolver: CliVersionResolver(
+    wrappedResolver: ToolResolvers([
+      RelativeToolResolver(
+        toolName: 'LLVM object stripping tool',
+        wrappedResolver: clang.defaultResolver!,
+        relativePath: Uri.file('llvm-strip'),
+      ),
+    ]),
+  ),
+);
