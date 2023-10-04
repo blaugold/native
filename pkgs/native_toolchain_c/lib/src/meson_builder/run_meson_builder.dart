@@ -158,7 +158,8 @@ class RunMesonBuilder {
     await _cSupport(crossSpec, compiler, linker);
 
     final crossFileUri = outDir.resolve('cross.ini');
-    await File.fromUri(crossFileUri).writeAsString(crossSpec.toIni());
+    await File.fromUri(crossFileUri)
+        .writeAsString(crossSpec.toIni(), flush: Platform.isWindows);
     return crossFileUri;
   }
 
