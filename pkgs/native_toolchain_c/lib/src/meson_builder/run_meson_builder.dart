@@ -18,7 +18,9 @@ import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
 
-// TODO: Support executables
+// TODO: Test Cross compilation for windows and linux.
+// TODO: Test exception paths.
+// TODO: Test meson nested target.
 // TODO: Support for cpp
 // TODO: Support for objc & objcpp
 // TODO: Strip binaries when launcher provides tools

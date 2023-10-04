@@ -13,6 +13,7 @@ import '../tool/tool_error.dart';
 import 'run_meson_builder.dart';
 
 class MesonBuilder {
+  final _MesonBuilderType _type;
   final String? assetId;
   final String project;
   final String target;
@@ -29,7 +30,17 @@ class MesonBuilder {
     this.excludeFromDependencies = const [],
     this.dartBuildFiles = const ['build.dart'],
     this.linkMode,
-  });
+  }) : _type = _MesonBuilderType.library;
+
+  MesonBuilder.executable({
+    required this.project,
+    required this.target,
+    this.options = const {},
+    this.excludeFromDependencies = const [],
+    this.dartBuildFiles = const ['build.dart'],
+  })  : _type = _MesonBuilderType.executable,
+        assetId = null,
+        linkMode = null;
 
   Future<void> run({
     required BuildConfig buildConfig,
@@ -43,9 +54,12 @@ class MesonBuilder {
 
     final (path: targetPath, name: targetName) = _parseMesonTarget(target);
 
-    final libUri = outDir
-        .resolve(targetPath == null ? './' : '$targetPath/')
-        .resolve(buildConfig.targetOs.dylibFileName(targetName));
+    final targetOutDir =
+        outDir.resolve(targetPath == null ? './' : '$targetPath/');
+    late final libraryUri =
+        targetOutDir.resolve(buildConfig.targetOs.dylibFileName(targetName));
+    late final executableUri = targetOutDir
+        .resolve(buildConfig.targetOs.executableFileName(targetName));
 
     final dartBuildFiles = [
       for (final source in this.dartBuildFiles) packageRoot.resolve(source),
@@ -53,7 +67,7 @@ class MesonBuilder {
 
     final linkModePreference = buildConfig.linkModePreference;
     final resolvedLinkMode = linkMode ?? linkModePreference.preferredLinkMode;
-    final targetWithType = '$target:${resolvedLinkMode.mesonTargetType}';
+    final targetWithType = '$target:${_type.mesonTargetType(resolvedLinkMode)}';
 
     if (!linkModePreference.potentialLinkMode.contains(resolvedLinkMode)) {
       final errorMessage = 'Link mode $resolvedLinkMode is not supported.';
@@ -71,26 +85,32 @@ class MesonBuilder {
           ...options,
           'buildtype':
               buildConfig.buildMode == BuildMode.release ? 'release' : 'debug',
-          'default_library': resolvedLinkMode.libraryType,
+          if (_type == _MesonBuilderType.library)
+            'default_library': resolvedLinkMode.libraryType,
         },
       );
       await task.run();
     }
 
-    final targets = [
-      if (!buildConfig.dryRun)
-        buildConfig.target
-      else
-        for (final target in Target.values)
-          if (target.os == buildConfig.targetOs) target
-    ];
-    for (final target in targets) {
-      buildOutput.assets.add(Asset(
-        id: assetId!,
-        linkMode: resolvedLinkMode,
-        target: target,
-        path: AssetAbsolutePath(libUri),
-      ));
+    if (assetId != null) {
+      final targets = [
+        if (!buildConfig.dryRun)
+          buildConfig.target
+        else
+          for (final target in Target.values)
+            if (target.os == buildConfig.targetOs) target
+      ];
+      for (final target in targets) {
+        buildOutput.assets.add(Asset(
+          id: assetId!,
+          linkMode: resolvedLinkMode,
+          target: target,
+          path: AssetAbsolutePath(switch (_type) {
+            _MesonBuilderType.library => libraryUri,
+            _MesonBuilderType.executable => executableUri,
+          }),
+        ));
+      }
     }
 
     if (!buildConfig.dryRun) {
@@ -111,6 +131,11 @@ class MesonBuilder {
   }
 }
 
+enum _MesonBuilderType {
+  executable,
+  library,
+}
+
 ({String? path, String name}) _parseMesonTarget(String target) {
   final parts = target.split('/');
   if (parts.length >= 2) {
@@ -121,6 +146,13 @@ class MesonBuilder {
   } else {
     return (path: null, name: target);
   }
+}
+
+extension on _MesonBuilderType {
+  String mesonTargetType(LinkMode linkMode) => switch (this) {
+        _MesonBuilderType.library => linkMode.mesonTargetType,
+        _MesonBuilderType.executable => 'executable',
+      };
 }
 
 extension on LinkMode {

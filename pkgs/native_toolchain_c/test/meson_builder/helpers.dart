@@ -4,5 +4,7 @@
 
 import '../helpers.dart';
 
-final mesonFixturesUri = packageUri.resolve('test/meson_builder/fixtures/');
+final mesonFixturesUri = packageUri.resolve('test/meson_builder/testfiles/');
 final mesonAddLibProjectUri = mesonFixturesUri.resolve('meson_add_lib/');
+final mesonHelloWorldProjectUri =
+    mesonFixturesUri.resolve('meson_hello_world/');
