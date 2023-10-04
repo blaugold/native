@@ -57,8 +57,10 @@ void main() {
     );
     final resolver = CompilerResolver(buildConfig: buildConfig, logger: logger);
     final compiler = await resolver.resolveCompiler();
+    final linker = await resolver.resolveLinker();
     final archiver = await resolver.resolveArchiver();
     expect(compiler.uri, buildConfig.cCompiler.cc);
+    expect(linker.uri, buildConfig.cCompiler.ld);
     expect(archiver.uri, buildConfig.cCompiler.ar);
   });
 
