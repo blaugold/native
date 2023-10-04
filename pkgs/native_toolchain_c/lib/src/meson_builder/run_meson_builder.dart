@@ -97,7 +97,7 @@ class RunMesonBuilder {
     final compilerEnvironment = await _compilerEnvironment(compiler);
     final pathEnvVar = (compilerEnvironment ?? Platform.environment)['PATH']!;
 
-    final crossFile = await _generateCrossFile(
+    final crossFileUri = await _generateCrossFile(
       compiler: compiler,
       linker: linker,
       archiver: archiver,
@@ -112,7 +112,7 @@ class RunMesonBuilder {
         '--backend',
         'ninja',
         '--cross',
-        crossFile.toFilePath(),
+        crossFileUri.toFilePath(),
         for (final MapEntry(key: name, :value) in options.entries)
           '-D$name=$value',
         outDir.toFilePath(),

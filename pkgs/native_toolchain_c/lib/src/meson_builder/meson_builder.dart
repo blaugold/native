@@ -45,7 +45,7 @@ class MesonBuilder {
 
     final libUri = outDir
         .resolve(targetPath == null ? './' : '$targetPath/')
-        .resolve(buildConfig.targetOs.mesonNinjaDylibFileName(targetName));
+        .resolve(buildConfig.targetOs.dylibFileName(targetName));
 
     final dartBuildFiles = [
       for (final source in this.dartBuildFiles) packageRoot.resolve(source),
@@ -109,15 +109,6 @@ class MesonBuilder {
       buildOutput.dependencies.dependencies.addAll(dartBuildFiles);
     }
   }
-}
-
-extension on OS {
-  String mesonNinjaDylibFileName(String target) => switch (this) {
-        // When using the Ninja backend Meson uses the the lib prefix even for
-        // shared libraries on Windows.
-        OS.windows => 'lib$target.dll',
-        _ => dylibFileName(target),
-      };
 }
 
 ({String? path, String name}) _parseMesonTarget(String target) {
