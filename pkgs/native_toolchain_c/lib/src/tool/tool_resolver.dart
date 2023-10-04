@@ -243,6 +243,32 @@ class InstallLocationResolver implements ToolResolver {
   }();
 }
 
+class PythonExecutableResolver extends InstallLocationResolver {
+  final String executableName;
+
+  PythonExecutableResolver({
+    required super.toolName,
+    required this.executableName,
+  }) : super(paths: [
+          if (Platform.isMacOS) '\$HOME/Library/Python/*/bin/$executableName',
+          if (Platform.isLinux || Platform.isMacOS)
+            '\$HOME/.local/bin/$executableName',
+          if (Platform.isWindows)
+            '\$HOME/AppData/Roaming/Python/Python*/Scripts/$executableName.exe',
+        ]);
+}
+
+class HomebrewExecutableResolver extends InstallLocationResolver {
+  final String executableName;
+
+  HomebrewExecutableResolver({
+    required super.toolName,
+    required this.executableName,
+  }) : super(paths: [
+          if (Platform.isMacOS) '/opt/homebrew/bin/$executableName',
+        ]);
+}
+
 class RelativeToolResolver implements ToolResolver {
   final String toolName;
   final ToolResolver wrappedResolver;

@@ -51,6 +51,8 @@ Future<Uri> tempDirForTest({String? prefix, bool keepTemp = false}) async {
           Platform.environment[keepTempKey]!.isEmpty) &&
       !keepTemp) {
     addTearDown(() => tempDir.delete(recursive: true));
+  } else {
+    print('Test temp directory: $tempUri');
   }
   return tempUri;
 }
@@ -114,7 +116,7 @@ Uri findPackageRoot(String packageName) {
       "'${Directory.current.uri.toFilePath()}'.");
 }
 
-Uri packageUri = findPackageRoot('native_toolchain_c');
+final Uri packageUri = findPackageRoot('native_toolchain_c');
 
 extension on Uri {
   String get name => pathSegments.where((e) => e != '').last;

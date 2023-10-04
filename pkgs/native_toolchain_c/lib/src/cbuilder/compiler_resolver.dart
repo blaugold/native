@@ -113,14 +113,6 @@ class CompilerResolver {
     return null;
   }
 
-  Future<ToolInstance?> _tryLoadToolFromNativeToolchain(Tool tool) async {
-    final resolved = (await tool.defaultResolver!.resolve(logger: logger))
-        .where((i) => i.tool == tool)
-        .toList()
-      ..sort();
-    return resolved.isEmpty ? null : resolved.first;
-  }
-
   Future<ToolInstance> resolveArchiver() async {
     // First, check if the launcher provided a direct path to the compiler.
     var result = await _tryLoadArchiverFromConfig();
@@ -293,5 +285,88 @@ class CompilerResolver {
     }
 
     return null;
+  }
+
+  Future<ToolInstance?> resolveStrip() async {
+    // First, check if the launcher provided a toolchain.
+    var result = await _tryLoadStripFromConfig();
+
+    // Then, try to detect on the host machine.
+    final tool = _selectStrip();
+    if (tool != null) {
+      result ??= await _tryLoadToolFromNativeToolchain(tool);
+    }
+
+    if (result != null) {
+      return result;
+    }
+
+    final targetOs = hookConfig.targetOS;
+
+    if (targetOs != OS.windows) {
+      final targetArchitecture = codeConfig.targetArchitecture;
+      final errorMessage =
+          "No tools configured on host '${hostOS}_$hostArchitecture' with "
+          "target '${targetOs}_$targetArchitecture'.";
+      logger?.severe(errorMessage);
+      throw ToolError(errorMessage);
+    }
+
+    return null;
+  }
+
+  /// Select the right object stripping tool for cross compiling to the
+  /// specified target.
+  Tool? _selectStrip() {
+    final targetOs = hookConfig.targetOS;
+    final targetArch = codeConfig.targetArchitecture;
+
+    // TODO(dacoharkes): Support falling back on other tools.
+    if (targetArch == hostArchitecture &&
+        targetOs == hostOS &&
+        hostOS == OS.linux) return llvmStrip;
+    if (targetOs == OS.macOS || targetOs == OS.iOS) return appleStrip;
+    if (targetOs == OS.android) return androidNdkStrip;
+    if (hostOS == OS.linux) {
+      switch (targetArch) {
+        case Architecture.arm:
+          return armLinuxGnueabihfStrip;
+        case Architecture.arm64:
+          return aarch64LinuxGnuStrip;
+        case Architecture.ia32:
+          return i686LinuxGnuStrip;
+        case Architecture.x64:
+          return x86_64LinuxGnuStrip;
+        case Architecture.riscv64:
+          return riscv64LinuxGnuStrip;
+      }
+    }
+
+    return null;
+  }
+
+  Future<ToolInstance?> _tryLoadStripFromConfig() async {
+    final compiler = await _tryLoadCompilerFromConfig();
+    if (compiler != null) {
+      final strip = (await StripRecognizer([compiler]).resolve(logger: logger))
+          .firstOrNull;
+      if (strip != null) {
+        final stripUri = strip.uri;
+        assert(await File.fromUri(stripUri).exists());
+        logger?.finer('Using object stripping tool ${stripUri.toFilePath()} '
+            'resolved from config.');
+        return strip;
+      }
+    }
+    logger?.finer('No object stripping tool resolved from config.');
+    return null;
+  }
+
+  Future<ToolInstance?> _tryLoadToolFromNativeToolchain(Tool tool) async {
+    final resolved = (await tool.defaultResolver!.resolve(logger: logger))
+        .where((i) => i.tool == tool)
+        .toList()
+      ..sort();
+    return resolved.isEmpty ? null : resolved.first;
   }
 }
