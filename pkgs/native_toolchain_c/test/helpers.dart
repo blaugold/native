@@ -112,7 +112,7 @@ Uri findPackageRoot(String packageName) {
       "'${Directory.current.uri.toFilePath()}'.");
 }
 
-Uri packageUri = findPackageRoot('native_toolchain_c');
+final Uri packageUri = findPackageRoot('native_toolchain_c');
 
 extension on Uri {
   String get name => pathSegments.where((e) => e != '').last;

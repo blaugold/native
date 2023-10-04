@@ -1,3 +1,7 @@
+// Copyright (c) 2023, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 import 'dart:io';
 
 import 'package:logging/logging.dart';
@@ -14,8 +18,6 @@ import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
 
-// TODO: Support static libraries
-// TODO: Support shared libraries
 // TODO: Support executables
 // TODO: Support for cpp
 // TODO: Support for objc & objcpp

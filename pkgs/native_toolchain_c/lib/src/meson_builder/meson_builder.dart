@@ -1,3 +1,7 @@
+// Copyright (c) 2023, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 import 'dart:io';
 
 import 'package:glob/glob.dart';
@@ -5,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:path/path.dart' as p;
 
+import '../tool/tool_error.dart';
 import 'run_meson_builder.dart';
 
 class MesonBuilder {
@@ -14,6 +19,7 @@ class MesonBuilder {
   final Map<String, String> options;
   final List<String> excludeFromDependencies;
   final List<String> dartBuildFiles;
+  final LinkMode? linkMode;
 
   MesonBuilder.library({
     required this.assetId,
@@ -22,6 +28,7 @@ class MesonBuilder {
     this.options = const {},
     this.excludeFromDependencies = const [],
     this.dartBuildFiles = const ['build.dart'],
+    this.linkMode,
   });
 
   Future<void> run({
@@ -44,16 +51,27 @@ class MesonBuilder {
       for (final source in this.dartBuildFiles) packageRoot.resolve(source),
     ];
 
+    final linkModePreference = buildConfig.linkModePreference;
+    final resolvedLinkMode = linkMode ?? linkModePreference.preferredLinkMode;
+    final targetWithType = '$target:${resolvedLinkMode.mesonTargetType}';
+
+    if (!linkModePreference.potentialLinkMode.contains(resolvedLinkMode)) {
+      final errorMessage = 'Link mode $resolvedLinkMode is not supported.';
+      logger?.severe(errorMessage);
+      throw ToolError(errorMessage);
+    }
+
     if (!buildConfig.dryRun) {
       final task = RunMesonBuilder(
         buildConfig: buildConfig,
         logger: logger,
         projectDir: projectDir,
-        mesonTarget: target,
+        mesonTarget: targetWithType,
         options: {
           ...options,
           'buildtype':
               buildConfig.buildMode == BuildMode.release ? 'release' : 'debug',
+          'default_library': resolvedLinkMode.libraryType,
         },
       );
       await task.run();
@@ -69,8 +87,7 @@ class MesonBuilder {
     for (final target in targets) {
       buildOutput.assets.add(Asset(
         id: assetId!,
-        // TODO: Respect link preference
-        linkMode: LinkMode.dynamic,
+        linkMode: resolvedLinkMode,
         target: target,
         path: AssetAbsolutePath(libUri),
       ));
@@ -113,4 +130,17 @@ extension on OS {
   } else {
     return (path: null, name: target);
   }
+}
+
+extension on LinkMode {
+  String get mesonTargetType => switch (this) {
+        LinkMode.dynamic => 'shared_library',
+        LinkMode.static => 'static_library',
+        _ => throw UnimplementedError(),
+      };
+  String get libraryType => switch (this) {
+        LinkMode.dynamic => 'shared',
+        LinkMode.static => 'static',
+        _ => throw UnimplementedError(),
+      };
 }
