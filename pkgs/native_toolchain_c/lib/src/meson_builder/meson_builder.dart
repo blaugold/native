@@ -9,18 +9,92 @@ import 'package:logging/logging.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:path/path.dart' as p;
 
+import '../cbuilder/cbuilder.dart';
 import '../tool/tool_error.dart';
 import 'run_meson_builder.dart';
 
-class MesonBuilder {
+/// Specification for building an artifact by building a [target] in a Meson
+/// [project].
+class MesonBuilder implements Builder {
   final _MesonBuilderType _type;
+
+  /// Asset identifier.
+  ///
+  /// Used to output the [BuildOutput.assets].
+  ///
+  /// If omitted, no asset will be added to the build output.
   final String? assetId;
+
+  /// The path to the Meson project.
+  ///
+  /// Resolved against [BuildConfig.packageRoot].
+  ///
+  /// All files in the project directory will be included in the
+  /// [BuildOutput.dependencies], with the exception of files in the
+  /// `subprojects` directory. See [subprojects] for more information.
+  ///
+  /// To exclude files from the [BuildOutput.dependencies], use
+  /// [excludeFromDependencies].
   final String project;
+
+  /// The target in the Meson [project] to build.
+  ///
+  /// See the [Meson documentation](https://mesonbuild.com/Commands.html#targets)
+  /// for more information on how to specify a target.
   final String target;
+
+  /// Options to pass to Meson.
   final Map<String, String> options;
+
+  /// The dart files involved in building this artifact.
+  ///
+  /// Resolved against [BuildConfig.packageRoot].
+  ///
+  /// Used to output the [BuildOutput.dependencies].
   final List<String> dartBuildFiles;
+
+  /// Glob patterns to specify files in the [project]'s `subprojects` directory
+  /// to include in the [BuildOutput.dependencies].
+  ///
+  /// Resolved against the `subprojects` directory in [project].
+  ///
+  /// By default all files in the `subprojects` directory are excluded from the
+  /// [BuildOutput.dependencies]. The reason for this is that Meson writes to
+  /// this directory, when the [Wrap dependency system](https://mesonbuild.com/Wrap-dependency-system-manual.html)
+  /// is used.
+  ///
+  /// Only the files in the `subprojects` directory that are managed manually
+  /// should be included in the [BuildOutput.dependencies]. This option should
+  /// be used to specify these files.
+  ///
+  /// For example, when [project] uses the `curl` dependency, the `curl.wrap`
+  /// file is managed manually and should be specified in this option.
+  ///
+  /// ```dart
+  /// MesonBuilder(
+  ///  ...
+  ///  subprojects: ['curl.wrap'],
+  ///  ...
+  /// );
+  /// ```
   final List<String> subprojects;
+
+  /// Glob patterns to specify files in [project] to exclude from the
+  /// [BuildOutput.dependencies].
+  ///
+  /// Resolved against [project].
   final List<String> excludeFromDependencies;
+
+  /// The supported [LinkMode] for the [target].
+  ///
+  /// This option only needs to be specified for libraries that don't cannot
+  /// be built with both [LinkMode.static] and [LinkMode.dynamic].
+  ///
+  /// Libraries that are configured with [`library`](https://mesonbuild.com/Reference-manual_functions.html#library)
+  /// can be built with both link modes, but libraries that are configured with
+  /// [`shared_library`](https://mesonbuild.com/Reference-manual_functions.html#shared_library)
+  /// or [`static_library`](https://mesonbuild.com/Reference-manual_functions.html#static_library)
+  /// functions can only be built with the the corresponding link mode.
   final LinkMode? linkMode;
 
   MesonBuilder.library({
@@ -45,6 +119,10 @@ class MesonBuilder {
         assetId = null,
         linkMode = null;
 
+  /// Runs the build for this Meson build spec.
+  ///
+  /// Completes with an error if the build fails.
+  @override
   Future<void> run({
     required BuildConfig buildConfig,
     required BuildOutput buildOutput,
