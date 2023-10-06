@@ -18,8 +18,9 @@ class MesonBuilder {
   final String project;
   final String target;
   final Map<String, String> options;
-  final List<String> excludeFromDependencies;
   final List<String> dartBuildFiles;
+  final List<String> subprojects;
+  final List<String> excludeFromDependencies;
   final LinkMode? linkMode;
 
   MesonBuilder.library({
@@ -27,8 +28,9 @@ class MesonBuilder {
     required this.project,
     required this.target,
     this.options = const {},
-    this.excludeFromDependencies = const [],
     this.dartBuildFiles = const ['build.dart'],
+    this.subprojects = const [],
+    this.excludeFromDependencies = const [],
     this.linkMode,
   }) : _type = _MesonBuilderType.library;
 
@@ -36,8 +38,9 @@ class MesonBuilder {
     required this.project,
     required this.target,
     this.options = const {},
-    this.excludeFromDependencies = const [],
     this.dartBuildFiles = const ['build.dart'],
+    this.subprojects = const [],
+    this.excludeFromDependencies = const [],
   })  : _type = _MesonBuilderType.executable,
         assetId = null,
         linkMode = null;
@@ -49,8 +52,10 @@ class MesonBuilder {
   }) async {
     final packageRoot = buildConfig.packageRoot;
     final outDir = buildConfig.outDir;
-    final projectDir = packageRoot.resolve(project);
+    final projectDir = packageRoot
+        .resolve(project.trim().endsWith('/') ? project : '$project/');
     final projectDirPath = projectDir.toFilePath();
+    final subprojectsPath = projectDir.resolve('subprojects/').toFilePath();
 
     final (path: targetPath, name: targetName) = _parseMesonTarget(target);
 
@@ -116,13 +121,33 @@ class MesonBuilder {
     if (!buildConfig.dryRun) {
       final excludeGlobs = excludeFromDependencies.map((pattern) =>
           Glob(pattern, context: p.Context(current: projectDirPath)));
+      final subprojectsGlob = Glob(
+        'subprojects/{**/,}*',
+        context: p.Context(current: projectDirPath),
+      );
+      final includeSubprojectsGlobs = subprojects.map((pattern) =>
+          Glob(pattern, context: p.Context(current: subprojectsPath)));
+
+      bool projectFilesFilter(Uri uri) {
+        final filePath = uri.toFilePath();
+
+        if (excludeGlobs.anyMatches(filePath)) {
+          return false;
+        }
+
+        if (subprojectsGlob.matches(filePath) &&
+            !includeSubprojectsGlobs.anyMatches(filePath)) {
+          return false;
+        }
+
+        return true;
+      }
 
       final projectFiles = await Directory(projectDirPath)
           .list(recursive: true)
           .where((entry) => entry is File)
           .map((file) => file.uri)
-          .where((uri) =>
-              !excludeGlobs.any((glob) => glob.matches(uri.toFilePath())))
+          .where(projectFilesFilter)
           .toList();
 
       buildOutput.dependencies.dependencies.addAll(projectFiles);
@@ -166,4 +191,8 @@ extension on LinkMode {
         LinkMode.static => 'static',
         _ => throw UnimplementedError(),
       };
+}
+
+extension on Iterable<Glob> {
+  bool anyMatches(String path) => any((glob) => glob.matches(path));
 }

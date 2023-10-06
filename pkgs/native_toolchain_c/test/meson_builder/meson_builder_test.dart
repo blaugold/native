@@ -17,7 +17,7 @@ void main() {
   for (final buildMode in BuildMode.values) {
     final suffix = testSuffix([buildMode]);
 
-    test('CBuilder executable$suffix', () async {
+    test('MesonBuilder executable$suffix', () async {
       final tempUri = await tempDirForTest();
       const name = 'hello_world';
 

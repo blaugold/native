@@ -23,6 +23,7 @@ import '../utils/run_process.dart';
 // TODO: Test meson nested target.
 // TODO: Support for cpp
 // TODO: Support for objc & objcpp
+// TODO: Support recompiling without completely cleaning the out directory.
 // TODO: Strip binaries when launcher provides tools
 // TODO: Figure out how to resolve the precise CPU name.
 // TODO: Figure out if there are any big endian targets.
@@ -64,8 +65,6 @@ class RunMesonBuilder {
         target = buildConfig.target;
 
   Future<void> run() async {
-    await _cleanOutDir();
-
     final (
       _,
       mesonInstance,
@@ -77,7 +76,7 @@ class RunMesonBuilder {
     ) = await (
       _cleanOutDir(),
       this.mesonInstance != null
-          ? Future.value(this.mesonInstance)
+          ? Future.value(this.mesonInstance!)
           : _loadToolFromNativeToolchain(meson),
       _loadToolFromNativeToolchain(ninja),
       _resolver.resolveCompiler(),
@@ -86,9 +85,7 @@ class RunMesonBuilder {
       _resolver.resolveStrip(),
     ).wait;
 
-    // TODO: Remove ignore once bug in Dart is fixed.
-    // ignore: unnecessary_non_null_assertion
-    if (!_supportedMesonVersionRange.allows(mesonInstance!.version!)) {
+    if (!_supportedMesonVersionRange.allows(mesonInstance.version!)) {
       final errorMessage =
           'Meson version ${mesonInstance.version} is in the range of supported '
           'versions ($_supportedMesonVersionRange).';
