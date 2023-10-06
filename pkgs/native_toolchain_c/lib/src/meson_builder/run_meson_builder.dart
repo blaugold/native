@@ -10,7 +10,10 @@ import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import '../cbuilder/compiler_resolver.dart';
+import '../native_toolchain/apple_clang.dart';
 import '../native_toolchain/build_tool.dart';
+import '../native_toolchain/clang.dart';
+import '../native_toolchain/gcc.dart';
 import '../native_toolchain/xcode.dart';
 import '../tool/tool.dart';
 import '../tool/tool_error.dart';
@@ -48,6 +51,7 @@ class RunMesonBuilder {
   final Target target;
   final Uri projectDir;
   final String mesonTarget;
+  final LinkMode linkMode;
   final Map<String, String> options;
   final ToolInstance? mesonInstance;
 
@@ -59,6 +63,7 @@ class RunMesonBuilder {
     required this.logger,
     required this.projectDir,
     required this.mesonTarget,
+    required this.linkMode,
     required this.options,
     @visibleForTesting this.mesonInstance,
   })  : outDir = buildConfig.outDir,
@@ -153,6 +158,10 @@ class RunMesonBuilder {
       ..properties.needsExeWrapper = target != Target.current;
     _hostMachineSpec(crossSpec);
     await _cSupport(crossSpec, compiler, linker);
+    await _cppSupport(crossSpec);
+    if (_compilerSupportsObjc(compiler)) {
+      await _objcSupport(crossSpec);
+    }
 
     final crossFileUri = outDir.resolve('cross.ini');
     await File.fromUri(crossFileUri)
@@ -196,9 +205,26 @@ class RunMesonBuilder {
       ...commonArgs,
       if (target.os == OS.android)
         // See the comment in RunCBuilder why this flag is being passed.
-        // if (dynamicLibrary != null)
-        '-nostartfiles',
+        if (linkMode == LinkMode.dynamic) '-nostartfiles',
     ];
+  }
+
+  Future<void> _cppSupport(_CrossSpec crossSpec) async {
+    crossSpec.binaries
+      ..cpp = crossSpec.binaries.c
+      ..cppLd = crossSpec.binaries.cLd;
+    crossSpec.builtInOptions
+      ..cppArgs = crossSpec.builtInOptions.cArgs
+      ..cppLinkArgs = crossSpec.builtInOptions.cLinkArgs;
+  }
+
+  Future<void> _objcSupport(_CrossSpec crossSpec) async {
+    crossSpec.binaries
+      ..objc = crossSpec.binaries.c
+      ..objcLd = crossSpec.binaries.cLd;
+    crossSpec.builtInOptions
+      ..objcArgs = crossSpec.builtInOptions.cArgs
+      ..objcLinkArgs = crossSpec.builtInOptions.cLinkArgs;
   }
 
   void _hostMachineSpec(_CrossSpec crossSpec) {
@@ -235,9 +261,9 @@ class RunMesonBuilder {
       Architecture.riscv64 => 'riscv64',
       _ => throw UnimplementedError(),
     };
-    // TODO: Figure out how to resolve a more precise CPU name.
     hostMachine.cpu = hostMachine.cpuFamily;
-    // TODO: Figure out if there are any big endian targets.
+    // Even tough some Dart supported architectures support both big and little
+    // endian, all the supported OSs use little endian, as far as I can tell.
     hostMachine.endian = 'little';
   }
 
@@ -268,6 +294,11 @@ class RunMesonBuilder {
       return await envFromBat(vcvars, arguments: vcvarsArgs ?? []);
     }
     return null;
+  }
+
+  bool _compilerSupportsObjc(ToolInstance compiler) {
+    final tool = compiler.tool;
+    return tool == clang || tool == appleClang || tool == gcc;
   }
 
   Future<Uri> _iosSdk(IOSSdk iosSdk, {required Logger? logger}) async {
@@ -356,10 +387,18 @@ class _MachineSpec {
 class _BuiltInOptionsSpec {
   List<String>? cArgs;
   List<String>? cLinkArgs;
+  List<String>? cppArgs;
+  List<String>? cppLinkArgs;
+  List<String>? objcArgs;
+  List<String>? objcLinkArgs;
 
   _IniProperties toProperties() => {
         'c_args': cArgs,
         'c_link_args': cLinkArgs,
+        'cpp_args': cppArgs,
+        'cpp_link_args': cppLinkArgs,
+        'objc_args': objcArgs,
+        'objc_link_args': objcLinkArgs,
       };
 }
 
@@ -374,12 +413,20 @@ class _PropertiesSpec {
 class _BinariesSpec {
   Uri? c;
   Uri? cLd;
+  Uri? cpp;
+  Uri? cppLd;
+  Uri? objc;
+  Uri? objcLd;
   Uri? ar;
   Uri? strip;
 
   _IniProperties toProperties() => {
         'c': c?.toFilePath(),
         'c_ld': cLd?.toFilePath(),
+        'cpp': cpp?.toFilePath(),
+        'cpp_ld': cppLd?.toFilePath(),
+        'objc': objc?.toFilePath(),
+        'objc_ld': objcLd?.toFilePath(),
         'ar': ar?.toFilePath(),
         'strip': strip?.toFilePath(),
       };

@@ -164,6 +164,7 @@ class MesonBuilder implements Builder {
         logger: logger,
         projectDir: projectDir,
         mesonTarget: targetWithType,
+        linkMode: resolvedLinkMode,
         options: {
           ...options,
           'buildtype':
