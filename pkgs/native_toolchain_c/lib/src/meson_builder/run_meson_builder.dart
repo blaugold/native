@@ -21,6 +21,7 @@ import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
 
+// TODO: Don't run build directly in out directory.
 // TODO: Test Cross compilation for windows and linux.
 // TODO: Test exception paths.
 // TODO: Test meson nested target.

@@ -254,10 +254,8 @@ class CompilerResolver {
   }
 
   Future<ToolInstance?> resolveStrip() async {
-    // TODO: Handle resolving when launcher provides tools
-    // Should launcher provide strip?
-    // We could probably find the right strip tool relative to the compiler.
-    ToolInstance? result;
+    // First, check if the launcher provided a toolchain.
+    var result = await _tryLoadStripFromConfig();
 
     // Then, try to detect on the host machine.
     final tool = _selectStrip();
@@ -304,6 +302,26 @@ class CompilerResolver {
       }
     }
 
+    return null;
+  }
+
+  Future<ToolInstance?> _tryLoadStripFromConfig() async {
+    final compiler = await _tryLoadCompilerFromConfig(
+      CCompilerConfig.ccConfigKeyFull,
+      (buildConfig) => buildConfig.cCompiler.cc,
+    );
+    if (compiler != null) {
+      final strip = (await StripRecognizer([compiler]).resolve(logger: logger))
+          .firstOrNull;
+      if (strip != null) {
+        final stripUri = strip.uri;
+        assert(await File.fromUri(stripUri).exists());
+        logger?.finer('Using object stripping tool ${stripUri.toFilePath()} '
+            'resolved from config.');
+        return strip;
+      }
+    }
+    logger?.finer('No object stripping tool resolved from config.');
     return null;
   }
 
