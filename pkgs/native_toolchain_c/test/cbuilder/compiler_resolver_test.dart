@@ -34,9 +34,13 @@ void main() {
     ].first.uri;
     final ld = [
       ...await appleLd.defaultResolver!.resolve(logger: logger),
-      ...await lib.defaultResolver!.resolve(logger: logger),
+      ...await link.defaultResolver!.resolve(logger: logger),
       ...await lld.defaultResolver!.resolve(logger: logger),
     ].first.uri;
+    final stripUri = [
+      ...await appleStrip.defaultResolver!.resolve(logger: logger),
+      ...await llvmStrip.defaultResolver!.resolve(logger: logger),
+    ].firstOrNull?.uri;
     final envScript = [
       ...await vcvars64.defaultResolver!.resolve(logger: logger)
     ].firstOrNull?.uri;
@@ -57,9 +61,13 @@ void main() {
     );
     final resolver = CompilerResolver(buildConfig: buildConfig, logger: logger);
     final compiler = await resolver.resolveCompiler();
+    final linker = await resolver.resolveLinker();
     final archiver = await resolver.resolveArchiver();
+    final strip = await resolver.resolveStrip();
     expect(compiler.uri, buildConfig.cCompiler.cc);
+    expect(linker.uri, buildConfig.cCompiler.ld);
     expect(archiver.uri, buildConfig.cCompiler.ar);
+    expect(strip?.uri, stripUri);
   });
 
   test('No compiler found', () async {

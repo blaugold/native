@@ -20,6 +20,11 @@ final gnuArchiver = Tool(name: 'GNU archiver');
 /// https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/ld.html
 final gnuLinker = Tool(name: 'GNU linker');
 
+/// The GNU object stripping tool.
+///
+/// https://ftp.gnu.org/old-gnu/Manuals/binutils-2.12/html_node/binutils_10.html
+final gnuStrip = Tool(name: 'GNU body stripping tool');
+
 /// [gcc] with [Tool.defaultResolver] for [Architecture.ia32].
 final i686LinuxGnuGcc = _gcc('i686-linux-gnu');
 
@@ -28,6 +33,9 @@ final i686LinuxGnuGccAr = _gnuArchiver('i686-linux-gnu');
 
 /// [gnuLinker] with [Tool.defaultResolver] for [Architecture.ia32].
 final i686LinuxGnuLd = _gnuLinker('i686-linux-gnu');
+
+/// [gnuStrip] with [Tool.defaultResolver] for [Architecture.ia32].
+final i686LinuxGnuStrip = _gnuStrip('i686-linux-gnu');
 
 /// [gcc] with [Tool.defaultResolver] for [Architecture.arm].
 final armLinuxGnueabihfGcc = _gcc('arm-linux-gnueabihf');
@@ -38,6 +46,9 @@ final armLinuxGnueabihfGccAr = _gnuArchiver('arm-linux-gnueabihf');
 /// [gnuLinker] with [Tool.defaultResolver] for [Architecture.arm].
 final armLinuxGnueabihfLd = _gnuLinker('arm-linux-gnueabihf');
 
+/// [gnuStrip] with [Tool.defaultResolver] for [Architecture.arm].
+final armLinuxGnueabihfStrip = _gnuStrip('arm-linux-gnueabihf');
+
 /// [gcc] with [Tool.defaultResolver] for [Architecture.arm64].
 final aarch64LinuxGnuGcc = _gcc('aarch64-linux-gnu');
 
@@ -46,6 +57,9 @@ final aarch64LinuxGnuGccAr = _gnuArchiver('aarch64-linux-gnu');
 
 /// [gnuLinker] with [Tool.defaultResolver] for [Architecture.arm64].
 final aarch64LinuxGnuLd = _gnuLinker('aarch64-linux-gnu');
+
+/// [gnuStrip] with [Tool.defaultResolver] for [Architecture.arm64].
+final aarch64LinuxGnuStrip = _gnuStrip('aarch64-linux-gnu');
 
 Tool _gcc(String prefix) => Tool(
       name: gcc.name,
@@ -77,6 +91,18 @@ Tool _gnuLinker(String prefix) {
       toolName: gnuLinker.name,
       wrappedResolver: gcc.defaultResolver!,
       relativePath: Uri.file('$prefix-ld'),
+    ),
+  );
+}
+
+Tool _gnuStrip(String prefix) {
+  final gcc = _gcc(prefix);
+  return Tool(
+    name: gnuStrip.name,
+    defaultResolver: RelativeToolResolver(
+      toolName: gnuStrip.name,
+      wrappedResolver: gcc.defaultResolver!,
+      relativePath: Uri.file('$prefix-strip'),
     ),
   );
 }

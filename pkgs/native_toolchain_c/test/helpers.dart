@@ -49,6 +49,8 @@ Future<Uri> tempDirForTest({String? prefix, bool keepTemp = false}) async {
           Platform.environment[keepTempKey]!.isEmpty) &&
       !keepTemp) {
     addTearDown(() => tempDir.delete(recursive: true));
+  } else {
+    print('Test temp directory: $tempUri');
   }
   return tempUri;
 }
@@ -66,12 +68,14 @@ Logger? _logger;
 Logger createCapturingLogger(List<String> capturedMessages) =>
     _createTestLogger(capturedMessages: capturedMessages);
 
-Logger _createTestLogger({List<String>? capturedMessages}) => Logger('')
-  ..level = Level.ALL
-  ..onRecord.listen((record) {
-    printOnFailure('${record.level.name}: ${record.time}: ${record.message}');
-    capturedMessages?.add(record.message);
-  });
+Logger _createTestLogger({List<String>? capturedMessages}) =>
+    Logger.detached('')
+      ..level = Level.ALL
+      ..onRecord.listen((record) {
+        printOnFailure(
+            '${record.level.name}: ${record.time}: ${record.message}');
+        capturedMessages?.add(record.message);
+      });
 
 /// Test files are run in a variety of ways, find this package root in all.
 ///
@@ -110,7 +114,7 @@ Uri findPackageRoot(String packageName) {
       "'${Directory.current.uri.toFilePath()}'.");
 }
 
-Uri packageUri = findPackageRoot('native_toolchain_c');
+final Uri packageUri = findPackageRoot('native_toolchain_c');
 
 extension on Uri {
   String get name => pathSegments.where((e) => e != '').last;

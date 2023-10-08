@@ -35,6 +35,12 @@ final androidNdkLld = Tool(
   defaultResolver: _AndroidNdkResolver(),
 );
 
+/// [llvmStrip] with [Tool.defaultResolver] for the [OS.android] NDK.
+final androidNdkStrip = Tool(
+  name: llvmStrip.name,
+  defaultResolver: _AndroidNdkResolver(),
+);
+
 class _AndroidNdkResolver implements ToolResolver {
   final installLocationResolver = PathVersionResolver(
     wrappedResolver: ToolResolvers([
@@ -122,6 +128,18 @@ class _AndroidNdkResolver implements ToolResolver {
           ToolInstance(
             tool: androidNdkLld,
             uri: ldUri,
+          ),
+          logger: logger,
+        ));
+      }
+      final stripUri = hostArchDir.uri
+          .resolve('bin/')
+          .resolve(Target.current.os.executableFileName('llvm-strip'));
+      if (await File.fromUri(stripUri).exists()) {
+        result.add(await CliVersionResolver.lookupVersion(
+          ToolInstance(
+            tool: androidNdkStrip,
+            uri: stripUri,
           ),
           logger: logger,
         ));
