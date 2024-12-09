@@ -55,6 +55,12 @@ jobs:
           ndk-version: r27
         if: ${{ matrix.os != 'macos' }}
 
+      - run: pip3 install meson==1.0.0
+        if: ${{ matrix.package == 'native_toolchain_c' }}
+
+      - uses: seanmiddleditch/gha-setup-ninja@16b940825621068d98711680b6c3ff92201f8fc0
+        if: ${{ matrix.package == 'native_toolchain_c' }}
+
       - run: dart pub get
 
       - run: dart pub get -C test_data/dart_app/

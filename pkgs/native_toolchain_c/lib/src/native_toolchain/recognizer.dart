@@ -146,3 +146,49 @@ class ArchiverRecognizer implements ToolResolver {
     return [];
   }
 }
+
+class StripRecognizer implements ToolResolver {
+  final List<ToolInstance> compilers;
+
+  StripRecognizer(this.compilers);
+
+  @override
+  Future<List<ToolInstance>> resolve({required Logger? logger}) async =>
+      (await Future.wait(compilers
+              .map((compiler) => _resolveFromCompiler(compiler, logger))))
+          .whereType<ToolInstance>()
+          .toList();
+
+  Future<ToolInstance?> _resolveFromCompiler(
+    ToolInstance compiler,
+    Logger? logger,
+  ) async {
+    final os = OS.current;
+    final compilerTool = compiler.tool;
+    final compilerPath = compiler.uri.toFilePath();
+    Tool? tool;
+    String? path;
+    if (compilerTool == gcc) {
+      tool = gnuStrip;
+      path = compilerPath.replaceFirst(RegExp(r'-gcc$'), '-strip');
+    } else if (compilerTool == clang) {
+      tool = llvmStrip;
+      path = compilerPath.replaceFirst(
+        RegExp('${os.executableFileName('clang')}\$'),
+        'llvm-strip',
+      );
+    } else if (compilerTool == appleClang) {
+      tool = appleStrip;
+      path = compilerPath.replaceFirst(
+        RegExp('${os.executableFileName('clang')}\$'),
+        'strip',
+      );
+    }
+
+    if (tool != null) {
+      return ToolInstance(tool: tool, uri: Uri.file(path!));
+    }
+
+    return null;
+  }
+}

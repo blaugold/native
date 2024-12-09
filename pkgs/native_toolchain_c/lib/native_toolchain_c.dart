@@ -11,4 +11,5 @@ export 'src/cbuilder/language.dart' show Language;
 export 'src/cbuilder/linker_options.dart' show LinkerOptions;
 export 'src/cbuilder/optimization_level.dart';
 export 'src/cbuilder/output_type.dart' show OutputType;
+export 'src/meson_builder/meson_builder.dart' show MesonBuilder;
 export 'src/utils/env_from_bat.dart';

@@ -43,6 +43,12 @@ jobs:
           ndk-version: r27
         if: ${{ matrix.sdk == 'stable' }}
 
+      - run: pip3 install meson==1.0.0
+        if: ${{ matrix.package == 'native_toolchain_c' }}
+
+      - uses: seanmiddleditch/gha-setup-ninja@16b940825621068d98711680b6c3ff92201f8fc0
+        if: ${{ matrix.package == 'native_toolchain_c' }}
+
       - run: dart pub get
 
       - name: Install native toolchains
@@ -53,7 +59,7 @@ jobs:
       - run: echo "$PWD/depot_tools" >> $GITHUB_PATH
       - run: mkdir dart-sdk
       - run: cd dart-sdk && fetch --no-history dart
-      - run: echo "./dart-sdk/sdk/buildtools/linux-x64/clang/bin" >> $GITHUB_PATH
+      - run: echo "$PWD/dart-sdk/sdk/buildtools/linux-x64/clang/bin" >> $GITHUB_PATH
       - run: clang --version
 
       - run: dart test

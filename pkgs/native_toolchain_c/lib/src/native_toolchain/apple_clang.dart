@@ -46,6 +46,18 @@ final Tool appleLd = Tool(
   ]),
 );
 
+/// The object stripping tool belonging to [appleClang].
+final Tool appleStrip = Tool(
+  name: 'Apple object stripping tool',
+  defaultResolver: ToolResolvers([
+    RelativeToolResolver(
+      toolName: 'Apple object stripping tool',
+      wrappedResolver: appleClang.defaultResolver!,
+      relativePath: Uri.file('strip'),
+    ),
+  ]),
+);
+
 /// The Mach-O dumping tool.
 ///
 /// https://llvm.org/docs/CommandGuide/llvm-otool.html
